@@ -134,6 +134,7 @@ class TBSMDataset():
             for i, _ in enumerate(f):
                 if i % 50000 == 0:
                     print("pre-processing line: ", i)
+        print('raw path', raw_path)
         self.total = min(self.total, i + 1)
 
         print("total lines: ", self.total)

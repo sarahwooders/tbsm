@@ -16,12 +16,15 @@ import random
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
+import sys 
+sys.path.insert(1, '/home/ubuntu/dlrm')
+import dlrm_s_pytorch as dlrm 
+
 # pytorch
 import torch
 import torch.nn as nn
 import torch.nn.functional as Functional
 from torch.nn.parameter import Parameter
-from torch.utils.tensorboard import SummaryWriter
 
 # tbsm data
 import tbsm_data_pytorch as tp
@@ -254,18 +257,18 @@ class TBSM_Net(nn.Module):
             f_mlp = np.array([self.num_mlps, self.num_mlps + 4, 1])
             self.final_mlp = dlrm.DLRM_Net().create_mlp(f_mlp, f_mlp.size - 2)
 
-        # Offsets need to be stored beforehand if args.run_fast.
-        if args.run_fast:
-            # Constant offsets tensor - resize if needed.
-            self.max_offset = 10000000
-            self.offsets = torch.tensor(list(range(self.max_offset)))
-            self.offsets_moved = False
+        ## Offsets need to be stored beforehand if args.run_fast.
+        #if args.run_fast:
+        #    # Constant offsets tensor - resize if needed.
+        #    self.max_offset = 10000000
+        #    self.offsets = torch.tensor(list(range(self.max_offset)))
+        #    self.offsets_moved = False
 
     def forward(self, x, lS_o, lS_i):
-        # Move offsets to device if needed and not already done.
-        if args.run_fast and not self.offsets_moved:
-            self.offsets = self.offsets.to(x[0].device)
-            self.offsets_moved = True
+        ## Move offsets to device if needed and not already done.
+        #if args.run_fast and not self.offsets_moved:
+        #    self.offsets = self.offsets.to(x[0].device)
+        #    self.offsets_moved = True
 
         # data point is history H and last entry w
         n = x[0].shape[0]  # batch_size
@@ -273,7 +276,8 @@ class TBSM_Net(nn.Module):
         H = torch.zeros(n, self.ts_length, self.ln_top[-1]).to(x[0].device)
 
         # Compute H using either fast or original approach depending on args.run_fast.
-        if args.run_fast:
+        #if args.run_fast:
+        if False:
             # j determines access indices of input; first, determine j bounds and get all inputs.
             j_lower = (ts - self.ts_length - 1)
             j_upper = (ts - 1)
@@ -670,13 +674,15 @@ def iterate_train_data(args, train_ld, val_ld, tbsm, k, use_gpu, device, writer,
 
 # selects best seed, and does main model training
 def train_tbsm(args, use_gpu):
+
+    from torch.utils.tensorboard import SummaryWriter
     # prepare the data
     train_ld, _ = tp.make_tbsm_data_and_loader(args, "train")
     val_ld, _ = tp.make_tbsm_data_and_loader(args, "val")
 
     # setup initial values
     isMainTraining = False
-    writer = SummaryWriter()
+    writer = SummaryWriter() #TODO: replace with wandb 
     losses = np.empty((0,3), np.float32)
     accuracies = np.empty((0,3), np.float32)
 
@@ -731,7 +737,7 @@ def train_tbsm(args, use_gpu):
     # main training loop
     isMainTraining = True
     print("time/loss/accuracy (if enabled):")
-    with torch.autograd.profiler.profile(args.enable_profiling, use_gpu) as prof:
+    with torch.autograd.profiler.profile(use_gpu) as prof:
         for k in range(args.nepochs):
             iterate_train_data(args, train_ld, val_ld, tbsm, k, use_gpu, device,
             writer, losses, accuracies, isMainTraining)
